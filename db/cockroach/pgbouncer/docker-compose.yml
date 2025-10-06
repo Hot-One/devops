@@ -1,0 +1,90 @@
+services:
+  cockroach1:
+    image: cockroachdb/cockroach:v24.1.0
+    command:
+      - start
+      - --insecure
+      - --advertise-addr=cockroach1
+      - --join=cockroach1,cockroach2,cockroach3
+    hostname: cockroach1
+    container_name: cockroach1
+    ports:
+      - "26257:26257"
+      - "8080:8080"
+    volumes:
+      - cockroach1-data:/cockroach/cockroach-data
+    networks:
+      - crdb_net
+
+  cockroach2:
+    image: cockroachdb/cockroach:v24.1.0
+    command:
+      - start
+      - --insecure
+      - --advertise-addr=cockroach2
+      - --join=cockroach1,cockroach2,cockroach3
+    hostname: cockroach2
+    container_name: cockroach2
+    ports:
+      - "26258:26257"
+      - "8081:8080"
+    volumes:
+      - cockroach2-data:/cockroach/cockroach-data
+    networks:
+      - crdb_net
+
+  cockroach3:
+    image: cockroachdb/cockroach:v24.1.0
+    command:
+      - start
+      - --insecure
+      - --advertise-addr=cockroach3
+      - --join=cockroach1,cockroach2,cockroach3
+    hostname: cockroach3
+    container_name: cockroach3
+    ports:
+      - "26259:26257"
+      - "8082:8080"
+    volumes:
+      - cockroach3-data:/cockroach/cockroach-data
+    networks:
+      - crdb_net
+
+  cockroach-init:
+    image: cockroachdb/cockroach:v24.1.0
+    depends_on:
+      - cockroach1
+      - cockroach2
+      - cockroach3
+    entrypoint:
+      [
+        "sh", "-ec",
+        "sleep 10 && cockroach init --insecure --host=cockroach1:26257"
+      ]
+    networks:
+      - crdb_net
+
+  pgbouncer:
+    image: edoburu/pgbouncer
+    container_name: pgbouncer
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt
+    ports:
+      - "6432:6432"
+    networks:
+      - crdb_net
+    depends_on:
+      - cockroach1
+
+
+
+
+networks:
+  crdb_net:
+    driver: bridge
+
+volumes:
+  cockroach1-data:
+  cockroach2-data:
+  cockroach3-data:
