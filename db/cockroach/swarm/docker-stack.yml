@@ -1,0 +1,74 @@
+services:
+  cockroach1:
+    image: cockroachdb/cockroach:v24.1.0
+    hostname: cockroach1
+    command:
+      - start
+      - --insecure
+      - --advertise-addr=cockroach1
+      - --join=cockroach1,cockroach2,cockroach3
+      - --listen-addr=0.0.0.0:26257
+      - --http-addr=0.0.0.0:8080
+    networks:
+      - crdb_net
+    volumes:
+      - ./data/cockroach1:/cockroach/cockroach-data
+
+  cockroach2:
+    image: cockroachdb/cockroach:v24.1.0
+    hostname: cockroach2
+    command:
+      - start
+      - --insecure
+      - --advertise-addr=cockroach2
+      - --join=cockroach1,cockroach2,cockroach3
+      - --listen-addr=0.0.0.0:26257
+      - --http-addr=0.0.0.0:8080
+    networks:
+      - crdb_net
+    volumes:
+      - ./data/cockroach2:/cockroach/cockroach-data
+
+  cockroach3:
+    image: cockroachdb/cockroach:v24.1.0
+    hostname: cockroach3
+    command:
+      - start
+      - --insecure
+      - --advertise-addr=cockroach3
+      - --join=cockroach1,cockroach2,cockroach3
+      - --listen-addr=0.0.0.0:26257
+      - --http-addr=0.0.0.0:8080
+    networks:
+      - crdb_net
+    volumes:
+      - ./data/cockroach3:/cockroach/cockroach-data
+
+  cockroach-init:
+    image: cockroachdb/cockroach:v24.1.0
+    entrypoint:
+      [
+        "sh", "-ec",
+        "echo 'DNS servers:'; cat /etc/resolv.conf; sleep 10 && cockroach init --insecure --host=cockroach1:26257"
+      ]
+    networks:
+      - crdb_net
+    deploy:
+      mode: replicated-job
+      restart_policy:
+        condition: none
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    ports:
+      - "6432:6432"
+    networks:
+      - crdb_net
+
+networks:
+  crdb_net:
+    driver: overlay
+    attachable: true

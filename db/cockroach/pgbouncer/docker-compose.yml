@@ -59,7 +59,7 @@ services:
     entrypoint:
       [
         "sh", "-ec",
-        "sleep 10 && cockroach init --insecure --host=cockroach1:26257"
+        "sleep 30 && cockroach init --insecure --host=cockroach1:26257"
       ]
     networks:
       - crdb_net
